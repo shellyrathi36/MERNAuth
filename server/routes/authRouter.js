@@ -21,9 +21,9 @@ authRouter.post("/logout", logout);
 // whenever we hit /logout it will exceuete the logout controller funtion...
 authRouter.post("/send-verify-otp", userAuth, sendVerifyOtp);
 
-authRouter.post("/verify-account", verifyEmail);
+authRouter.post("/verify-account", userAuth, verifyEmail);
 
-authRouter.post("/is-auth", userAuth, isAuthenticated);
+authRouter.get("/is-auth", userAuth, isAuthenticated);
 
 authRouter.post("/send-reset-otp", sendResetOtp);
 

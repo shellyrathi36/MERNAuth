@@ -3,6 +3,10 @@ import jwt from "jsonwebtoken";
 import userModel from "../models/userModel.js";
 import transporter from "../config/nodemailer.js";
 import { text } from "express";
+import {
+  EMAIL_VERIFY_TEMPLATE,
+  PASSWORD_RESET_TEMPLATE,
+} from "../config/emailTemplates.js";
 
 // REGISTER
 export const register = async (req, res) => {
@@ -112,7 +116,7 @@ export const sendVerifyOtp = async (req, res) => {
     }
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
-    user.veriftOtp = otp;
+    user.verifyOtp = otp;
     user.verifyOtpExpireAt = Date.now() + 24 * 60 * 60 * 1000;
 
     await user.save();
@@ -121,12 +125,17 @@ export const sendVerifyOtp = async (req, res) => {
       from: process.env.SENDER_MAIL,
       to: user.email,
       subject: "Account verification otp",
-      text: `Your otp is ${otp}. Verify your account using this OTP.`,
+      // text: `Your otp is ${otp}. Verify your account using this OTP.`,
+      html: EMAIL_VERIFY_TEMPLATE.replace("{{otp}}", otp).replace(
+        "{{email}}",
+        user.email
+      ),
     };
 
     await transporter.sendMail(mailOption);
 
     res.json({ success: true, message: "verification OTP sent on Email" });
+    console.log("OTP saved in DB:", otp, "for user:", user._id);
   } catch (error) {
     return res.json({ success: false, message: error.message });
   }
@@ -143,7 +152,7 @@ export const verifyEmail = async (req, res) => {
     if (!user) {
       return res.json({ success: false, message: "User does not exist" });
     }
-    if (user.veriftOtp == " " || user.veriftOtp !== otp) {
+    if (user.verifyOtp == "" || user.verifyOtp !== otp) {
       return res.json({ success: false, message: "Invalid OTP" });
     }
 
@@ -152,7 +161,7 @@ export const verifyEmail = async (req, res) => {
     }
 
     user.isAccountVerified = true;
-    user.veriftOtp = "";
+    user.verifyOtp = "";
     user.verifyOtpExpireAt = 0;
 
     await user.save();
@@ -184,7 +193,7 @@ export const sendResetOtp = async (req, res) => {
   }
 
   try {
-    const user = await userModel.findOne(email);
+    const user = await userModel.findOne({ email });
     if (!user) {
       return res.json({
         success: false,
@@ -201,7 +210,11 @@ export const sendResetOtp = async (req, res) => {
       from: process.env.SENDER_MAIL,
       to: user.email,
       subject: "Password Reset OTP",
-      text: `Your Reset otp is ${otp}`,
+      // text: `Your Reset otp is ${otp}`,
+      html: PASSWORD_RESET_TEMPLATE.replace("{{otp}}", otp).replace(
+        "{{email}}",
+        user.email
+      ),
     };
 
     await transporter.sendMail(mailOption);
